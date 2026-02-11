@@ -1,6 +1,7 @@
 import os
 import logging
 import aiohttp
+import re
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.enums import ParseMode
@@ -16,258 +17,185 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
-# ============ БАЗА ДАННЫХ - ТОЛЬКО ТВОИ БРЕНДЫ ============
-SERVICE_CENTERS = {
-    "lg": {
-        "brand": "📺 LG",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр LG"
-    },
-    "haier": {
-        "brand": "❄️ Haier",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Haier"
-    },
-    "samsung": {
-        "brand": "📱 Samsung",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Samsung"
-    },
-    "lenovo": {
-        "brand": "💻 Lenovo",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Lenovo"
-    },
-    "beko": {
-        "brand": "🔵 Beko",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Beko"
-    },
-    "indesit": {
-        "brand": "🔵 Indesit",
-        "name": "Indesit",
-        "address": "Горячая линия производителя",
-        "phone": "+7 (800) 333-38-87",
-        "hours": "Пн-Чт 7:00-18:00, Пт 7:00-17:00, Сб-Вс 9:00-17:00",
-        "services": "Авторизованный сервисный центр Indesit"
-    },
-    "gefest": {
-        "brand": "🔥 Gefest",
-        "name": "АСЦ Сармат Сервис",
-        "address": "ул. Бабушкина, 88а",
-        "phone": "+7 (927) 588-82-58",
-        "hours": "Пн-Вс 8:00-20:00",
-        "services": "Сервисный центр Gefest"
-    },
-    "philips": {
-        "brand": "💡 Philips",
-        "name": "Элком",
-        "address": "ул. Савушкина, 51А",
-        "phone": "+7 (800) 220-00-04",
-        "hours": "Пн-Сб 09:00-15:00",
-        "services": "Сервисный центр Philips"
-    },
-    "tcl": {
-        "brand": "📺 TCL",
-        "name": "TCL.COM",
-        "address": "Горячая линия производителя",
-        "phone": "+7 (800) 100-80-80",
-        "hours": "8:00-21:00",
-        "services": "Сервисный центр TCL"
-    },
-    "hiberg": {
-        "brand": "🔧 Hiberg",
-        "name": "ИП Типаков Владимир Иванович",
-        "address": "ул. Рождественского, 15В",
-        "phone": "+7 (8512) 454-674",
-        "hours": "Пн-Пт 09:00-18:00",
-        "services": "Сервисный центр Hiberg"
-    },
-    "centek": {
-        "brand": "🔧 Centek",
-        "name": "СЦ Энергия",
-        "address": "ул. Ботвина, 6А/1",
-        "phone": "+7 (8512) 200-545",
-        "hours": "Пн-Пт 09:00-17:30",
-        "services": "Сервисный центр Centek"
-    },
-    "yandex": {
-        "brand": "🤖 Яндекс",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Яндекс"
-    },
-    "atlant": {
-        "brand": "❄️ ATLANT",
-        "name": "Атлант-2001",
-        "address": "ул. Сен-Симона, 42",
-        "phone": "+7 (8512) 38-28-67",
-        "hours": "Пн-Пт 10:00-18:00",
-        "services": "Сервисный центр ATLANT"
-    },
-    "саратов": {
-        "brand": "🏭 САРАТОВ",
-        "name": "Эталон Сервис",
-        "address": "ул. Жилая, 8к2",
-        "phone": "+7 (909) 373-59-30",
-        "hours": "Пн-Сб 09:00-18:00",
-        "services": "Сервисный центр Саратов"
-    },
-    "vestel": {
-        "brand": "📺 Vestel",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Vestel"
-    },
-    "candy": {
-        "brand": "🍬 Candy",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Candy"
-    },
-    "leran": {
-        "brand": "🔧 Leran",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Leran"
-    },
-    "midea": {
-        "brand": "❄️ Midea",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Midea"
-    },
-    "oasis": {
-        "brand": "🧊 Oasis",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Oasis"
-    },
-    "ballu": {
-        "brand": "🌬️ Ballu",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр Ballu"
-    },
-    "don": {
-        "brand": "💤 DON",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр DON"
-    },
-    "willmark": {
-        "brand": "🔧 WILLMARK",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр WILLMARK"
-    },
-    "leff": {
-        "brand": "🔧 LEFF",
-        "name": "ХАЙТЕК",
-        "address": "ул. Ташкентская, 13А и ул. Звездная, 7/4",
-        "phone": "+7 (8512) 23-83-10, +7 (8512) 23-83-11",
-        "hours": "Пн-Пт 09:00-19:00, Сб 10:00-14:00",
-        "services": "Авторизованный сервисный центр LEFF"
-    }
-}
+# ============ ТВОЯ РАБОЧАЯ ССЫЛКА ============
+GOOGLE_SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vThbaWJ9-P9-f46WZAaTIBUKjjOGXKS9G9GmFzkYtmCsik_cmqIzJXLnV2315dHI5UPgyEEM7wqaAjo/pub?gid=510149580&single=true&output=csv"
+# =============================================
 
-# ============ КОМАНДЫ БОТА ============
+async def load_products():
+    """Загружает и парсит твой файл в список товаров"""
+    products = []
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(GOOGLE_SHEET_CSV) as resp:
+                if resp.status != 200:
+                    logger.error(f"Не удалось загрузить файл: {resp.status}")
+                    return products
+                
+                text = await resp.text()
+                lines = text.splitlines()
+                
+                current_warehouse = "Неизвестно"
+                
+                for line in lines:
+                    if not line.strip():
+                        continue
+                    
+                    # Определяем склад
+                    if "СКЛАД" in line.upper() or "РОЗНИЦА" in line.upper():
+                        parts = line.split(',')
+                        if parts and parts[0].strip():
+                            current_warehouse = parts[0].strip()
+                        continue
+                    
+                    # Пропускаем служебные строки
+                    if any(word in line.upper() for word in ["ИТОГО", "ПАРАМЕТРЫ", "АРТИКУЛ", "НОМЕНКЛАТУРА", "===>"]):
+                        continue
+                    
+                    columns = line.split(',')
+                    
+                    if len(columns) > 8:
+                        name = columns[1].strip() if len(columns) > 1 else ""
+                        stock_text = columns[7].strip() if len(columns) > 7 else ""
+                        
+                        if not name or len(name) < 3:
+                            continue
+                        
+                        try:
+                            match = re.search(r'(\d+)', stock_text)
+                            stock = int(match.group(1)) if match else 0
+                        except:
+                            stock = 0
+                        
+                        if stock <= 0:
+                            continue
+                        
+                        products.append({
+                            "name": name,
+                            "stock": stock,
+                            "warehouse": current_warehouse
+                        })
+                
+                logger.info(f"✅ Загружено {len(products)} товаров")
+                return products
+                
+    except Exception as e:
+        logger.error(f"Ошибка загрузки: {e}")
+        return products
+
+PRODUCTS = []
+
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer(
-        "🎬 <b>ТЕХНОВЫГОДА — Сервисный помощник</b>\n\n"
-        "📺 IPTV: /list\n"
-        "🔧 Сервисы: /service НАЗВАНИЕ\n\n"
-        "✅ /service lg\n"
-        "✅ /service haier\n"
-        "✅ /service samsung\n"
-        "✅ /service centek"
+        "🎬 <b>ТЕХНОВЫГОДА — Поиск товаров</b>\n\n"
+        "🔍 <b>Поиск по моделям:</b> /search <i>название</i>\n"
+        "📺 <b>IPTV плейлист:</b> /list\n\n"
+        "✅ <b>Примеры:</b>\n"
+        "/search beko 7612\n"
+        "/search lg ga-b509\n"
+        "/search haier c2f636\n"
+        "/search телевизор 55 tcl\n\n"
+        "📦 <i>Поиск работает по ключевым словам</i>"
     )
 
 @dp.message(Command("list"))
 async def send_list(message: types.Message):
-    await message.answer(f"📺 <b>IPTV плейлист:</b>\n<code>{PUBLIC_URL}</code>")
+    await message.answer(
+        f"📺 <b>Твой IPTV плейлист:</b>\n<code>{PUBLIC_URL}</code>",
+        disable_web_page_preview=True
+    )
 
-@dp.message(Command("service"))
-async def cmd_service(message: types.Message):
-    args = message.text.split()
+@dp.message(Command("search"))
+async def cmd_search(message: types.Message):
+    global PRODUCTS
     
-    if len(args) == 1:
-        # Показываем список всех брендов
-        brands = "• " + "\n• ".join(SERVICE_CENTERS.keys())
-        await message.answer(
-            f"🔧 <b>Доступные бренды ({len(SERVICE_CENTERS)}):</b>\n\n{brands}\n\n"
-            f"Пример: /service lg"
-        )
+    if not PRODUCTS:
+        status_msg = await message.answer("⏳ Загружаю остатки...")
+        PRODUCTS = await load_products()
+        await status_msg.delete()
+        
+        if not PRODUCTS:
+            await message.answer("❌ Не удалось загрузить данные о товарах.")
+            return
+    
+    args = message.text.split(maxsplit=1)
+    if len(args) < 2:
+        await message.answer("🔍 Пример: /search beko 7612")
         return
     
-    brand = args[1].lower()
+    query = args[1].strip().lower()
+    keywords = query.split()
     
-    if brand in SERVICE_CENTERS:
-        data = SERVICE_CENTERS[brand]
-        text = (
-            f"🔧 <b>{data['brand']}</b>\n"
-            f"🏢 {data['name']}\n"
-            f"📍 {data['address']}\n"
-            f"📞 {data['phone']}\n"
-            f"🕒 {data['hours']}\n"
-            f"🛠 {data['services']}"
+    results = []
+    for product in PRODUCTS:
+        name_lower = product["name"].lower()
+        
+        if all(keyword in name_lower for keyword in keywords):
+            results.append(product)
+    
+    results.sort(key=lambda x: x["stock"], reverse=True)
+    results = results[:15]
+    
+    if not results:
+        await message.answer(f"❌ Ничего не найдено по запросу «{query}»")
+        return
+    
+    response = [f"🔍 <b>Найдено по запросу «{query}»:</b>"]
+    response.append(f"📦 Всего позиций: {len(results)}\n")
+    
+    for i, p in enumerate(results[:10], 1):
+        response.append(
+            f"{i}. <b>{p['name'][:60]}</b>{'…' if len(p['name']) > 60 else ''}\n"
+            f"   📍 {p['warehouse']}  |  🟢 {p['stock']} шт"
         )
-        await message.answer(text)
-    else:
-        await message.answer(f"❌ Бренд «{brand}» не найден")
+    
+    if len(results) > 10:
+        response.append(f"\n... и ещё {len(results) - 10} позиций")
+    
+    await message.answer("\n".join(response), parse_mode=ParseMode.HTML)
 
-# ============ ВЕБ-СЕРВЕР ДЛЯ RENDER ============
+async def handle_port(request):
+    return web.Response(text="✅ Tehno51 Bot is running")
+
 async def handle_iptv(request):
-    url = "https://raw.githubusercontent.com/Tehnovigoda51/tehnobot51/main/tehno51.m3u"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            return web.Response(text=await resp.text(), content_type='audio/x-mpegurl')
+    github_raw_url = "https://raw.githubusercontent.com/Tehnovigoda51/tehnobot51/main/tehno51.m3u"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(github_raw_url) as resp:
+                if resp.status == 200:
+                    content = await resp.text()
+                    return web.Response(
+                        text=content,
+                        content_type='audio/x-mpegurl',
+                        headers={
+                            'Content-Disposition': 'inline; filename="tehno51.m3u"',
+                            'Access-Control-Allow-Origin': '*'
+                        }
+                    )
+                else:
+                    return web.Response(status=404, text="Playlist not found")
+    except Exception as e:
+        logger.error(f"Error fetching playlist: {e}")
+        return web.Response(status=500, text="Error loading playlist")
 
 async def start_web_server():
     app = web.Application()
+    app.router.add_get('/', handle_port)
+    app.router.add_get('/health', handle_port)
     app.router.add_get('/iptv.m3u', handle_iptv)
-    app.router.add_get('/', lambda r: web.Response(text="OK"))
     runner = web.AppRunner(app)
     await runner.setup()
-    await web.TCPSite(runner, '0.0.0.0', int(os.environ.get('PORT', 10000))).start()
+    port = int(os.environ.get('PORT', 10000))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    logger.info(f"🌐 Web server started on port {port}")
 
 async def main():
     await start_web_server()
+    logger.info("🚀 Tehno51 Bot started on Render!")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(main())
