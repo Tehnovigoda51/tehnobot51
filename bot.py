@@ -8,7 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 BOT_TOKEN = "8538647250:AAHIWOTbXr_ocVepdl2MnSzZD3BfMErEUs0"
 
 # ТВОЯ РАБОЧАЯ ССЫЛКА — GitHub Raw
-PUBLIC_URL = "https://raw.githubusercontent.com/Tehnovigoda51/tehnobot51/main/tehno51.m3u"
+PUBLIC_URL = "PUBLIC_URL = "https://tehnobot51.onrender.com/iptv.m3u"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,4 +42,5 @@ async def main():
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())
