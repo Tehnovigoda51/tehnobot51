@@ -8,9 +8,9 @@ from aiohttp import web
 
 BOT_TOKEN = "8538647250:AAHIWOTbXr_ocVepdl2MnSzZD3BfMErEUs0"
 
-# ===== ТВОЯ НОВАЯ КОРОТКАЯ ССЫЛКА =====
+# ===== КОРОТКАЯ ССЫЛКА =====
 PUBLIC_URL = "https://tehnobot51.onrender.com/iptv.m3u"
-# =======================================
+# ============================
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,17 +40,31 @@ async def handle_port(request):
     return web.Response(text="✅ Tehno51 Bot is running")
 
 async def handle_iptv(request):
-    # Перенаправляем на реальный плейлист в GitHub
-    return web.Response(
-        text="https://raw.githubusercontent.com/Tehnovigoda51/tehnobot51/main/tehno51.m3u",
-        content_type="text/plain"
-    )
+    # Реальный путь к файлу плейлиста в GitHub
+    github_raw_url = "https://raw.githubusercontent.com/Tehnovigoda51/tehnobot51/main/tehno51.m3u"
+    
+    # Скачиваем файл и отдаём его как M3U
+    import aiohttp
+    async with aiohttp.ClientSession() as session:
+        async with session.get(github_raw_url) as resp:
+            if resp.status == 200:
+                content = await resp.text()
+                return web.Response(
+                    text=content,
+                    content_type='audio/x-mpegurl',
+                    headers={
+                        'Content-Disposition': 'inline; filename="tehno51.m3u"',
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                )
+            else:
+                return web.Response(status=404, text="Playlist not found")
 
 async def start_web_server():
     app = web.Application()
     app.router.add_get('/', handle_port)
     app.router.add_get('/health', handle_port)
-    app.router.add_get('/iptv.m3u', handle_iptv)  # Короткая ссылка
+    app.router.add_get('/iptv.m3u', handle_iptv)  # Теперь отдаёт реальный M3U
     runner = web.AppRunner(app)
     await runner.setup()
     port = int(os.environ.get('PORT', 10000))
