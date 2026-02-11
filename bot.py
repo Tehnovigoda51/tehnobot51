@@ -1,5 +1,6 @@
 import os
 import logging
+import aiohttp
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.enums import ParseMode
@@ -40,31 +41,40 @@ async def handle_port(request):
     return web.Response(text="✅ Tehno51 Bot is running")
 
 async def handle_iptv(request):
-    # Реальный путь к файлу плейлиста в GitHub
+    # ПРЯМАЯ ССЫЛКА НА ФАЙЛ — ИСПРАВЛЕНО!
     github_raw_url = "https://raw.githubusercontent.com/Tehnovigoda51/tehnobot51/main/tehno51.m3u"
     
-    # Скачиваем файл и отдаём его как M3U
-    import aiohttp
-    async with aiohttp.ClientSession() as session:
-        async with session.get(github_raw_url) as resp:
-            if resp.status == 200:
-                content = await resp.text()
-                return web.Response(
-                    text=content,
-                    content_type='audio/x-mpegurl',
-                    headers={
-                        'Content-Disposition': 'inline; filename="tehno51.m3u"',
-                        'Access-Control-Allow-Origin': '*'
-                    }
-                )
-            else:
-                return web.Response(status=404, text="Playlist not found")
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(github_raw_url) as resp:
+                if resp.status == 200:
+                    content = await resp.text()
+                    return web.Response(
+                        text=content,
+                        content_type='audio/x-mpegurl',
+                        headers={
+                            'Content-Disposition': 'inline; filename="tehno51.m3u"',
+                            'Access-Control-Allow-Origin': '*'
+                        }
+                    )
+                else:
+                    logger.error(f"GitHub вернул статус: {resp.status}")
+                    return web.Response(
+                        text=f"Ошибка загрузки плейлиста: {resp.status}",
+                        status=500
+                    )
+    except Exception as e:
+        logger.error(f"Ошибка при запросе к GitHub: {e}")
+        return web.Response(
+            text=f"Ошибка: {str(e)}",
+            status=500
+        )
 
 async def start_web_server():
     app = web.Application()
     app.router.add_get('/', handle_port)
     app.router.add_get('/health', handle_port)
-    app.router.add_get('/iptv.m3u', handle_iptv)  # Теперь отдаёт реальный M3U
+    app.router.add_get('/iptv.m3u', handle_iptv)
     runner = web.AppRunner(app)
     await runner.setup()
     port = int(os.environ.get('PORT', 10000))
@@ -72,6 +82,7 @@ async def start_web_server():
     await site.start()
     logger.info(f"🌐 Web server started on port {port}")
     logger.info(f"🔗 Короткая ссылка: https://tehnobot51.onrender.com/iptv.m3u")
+    logger.info(f"📁 Источник: {github_raw_url}")
 
 async def main():
     await start_web_server()
@@ -81,4 +92,3 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
-
